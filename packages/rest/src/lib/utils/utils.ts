@@ -2,13 +2,14 @@ import { Blob, Buffer } from 'node:buffer';
 import { URLSearchParams } from 'node:url';
 import { types } from 'node:util';
 import type { RESTPatchAPIChannelJSONBody } from 'discord-api-types/v10';
-import { FormData, type Dispatcher, type RequestInit } from 'undici';
+import { FormData, type RequestInit } from 'undici';
 import type { RequestOptions } from '../REST.js';
 import { RequestMethod } from '../RequestManager.js';
 
-export function parseHeader(header: string[] | string | undefined): string | undefined {
-	if (header === undefined) {
-		return header;
+export function parseHeader(header: string | string[] | null | undefined): string | undefined {
+	// eslint-disable-next-line eqeqeq
+	if (header == undefined) {
+		return undefined;
 	} else if (typeof header === 'string') {
 		return header;
 	}
@@ -55,20 +56,6 @@ export function makeURLSearchParams(options?: Record<string, unknown>) {
 	}
 
 	return params;
-}
-
-/**
- * Converts the response to usable data
- *
- * @param res - The fetch response
- */
-export async function parseResponse(res: Dispatcher.ResponseData): Promise<unknown> {
-	const header = parseHeader(res.headers['content-type']);
-	if (header?.startsWith('application/json')) {
-		return res.body.json();
-	}
-
-	return res.body.arrayBuffer();
 }
 
 /**

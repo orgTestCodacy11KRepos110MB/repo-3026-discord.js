@@ -492,8 +492,8 @@ test('server responding too slow', async () => {
 
 	const promise = api2.get('/slow');
 
-	await expect(promise).rejects.toThrowError('Request aborted');
-}, 1_000);
+	await expect(promise).rejects.toThrowError('The operation was aborted.');
+}, 1000);
 
 test('Unauthorized', async () => {
 	mockPool

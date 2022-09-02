@@ -1,6 +1,6 @@
-import type { Dispatcher } from 'undici';
-import type { RequestOptions } from '../REST';
+import type { RequestOptions } from '../REST.js';
 import type { HandlerRequestData, RouteData } from '../RequestManager.js';
+import type { Response } from '../natives.js';
 
 export interface IHandler {
 	/**
@@ -24,5 +24,5 @@ export interface IHandler {
 		url: string,
 		options: RequestOptions,
 		requestData: HandlerRequestData,
-	): Promise<Dispatcher.ResponseData>;
+	): Promise<Response>;
 }

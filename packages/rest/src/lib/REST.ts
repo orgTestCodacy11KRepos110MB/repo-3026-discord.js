@@ -1,19 +1,16 @@
 import { EventEmitter } from 'node:events';
 import type { Collection } from '@discordjs/collection';
-import type { request, Dispatcher } from 'undici';
+import type { Dispatcher } from 'undici';
 import { CDN } from './CDN.js';
 import {
 	RequestManager,
 	RequestMethod,
-	type HashData,
-	type HandlerRequestData,
-	type InternalRequest,
-	type RequestData,
-	type RouteLike,
+	RouteLike,
 } from './RequestManager.js';
-import type { IHandler } from './handlers/IHandler.js';
+import type { HashData } from './RequestManager.js';
+import type { IHandler } from './handlers/IHandler.js;
+import { fetch, parseResponse, Response } from './natives.js';
 import { DefaultRestOptions, RESTEvents } from './utils/constants.js';
-import { parseResponse } from './utils/utils.js';
 
 /**
  * Options to be passed when creating the REST instance
@@ -233,7 +230,7 @@ export interface REST {
 		(<S extends string | symbol>(event?: Exclude<S, keyof RestEvents>) => this);
 }
 
-export type RequestOptions = Exclude<Parameters<typeof request>[1], undefined>;
+export type RequestOptions = Exclude<Parameters<typeof fetch>[1], undefined>;
 
 export class REST extends EventEmitter {
 	public readonly cdn: CDN;

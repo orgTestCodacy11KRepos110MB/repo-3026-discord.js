@@ -4,10 +4,11 @@ import { setInterval, clearInterval } from 'node:timers';
 import type { URLSearchParams } from 'node:url';
 import { Collection } from '@discordjs/collection';
 import { DiscordSnowflake } from '@sapphire/snowflake';
-import { FormData, type RequestInit, type BodyInit, type Dispatcher, type Agent } from 'undici';
+import { FormData, type RequestInit, type BodyInit, type Dispatcher, type Agent, Headers } from 'undici';
 import type { RESTOptions, RestEvents, RequestOptions } from './REST.js';
 import type { IHandler } from './handlers/IHandler.js';
 import { SequentialHandler } from './handlers/SequentialHandler.js';
+import type { Response } from './natives';
 import { DefaultRestOptions, DefaultUserAgent, RESTEvents } from './utils/constants.js';
 import { resolveBody } from './utils/utils.js';
 
@@ -157,16 +158,16 @@ export interface HashData {
 }
 
 export interface RequestManager {
-	emit: (<K extends keyof RestEvents>(event: K, ...args: RestEvents[K]) => boolean) &
-		(<S extends string | symbol>(event: Exclude<S, keyof RestEvents>, ...args: any[]) => boolean);
-
-	off: (<K extends keyof RestEvents>(event: K, listener: (...args: RestEvents[K]) => void) => this) &
-		(<S extends string | symbol>(event: Exclude<S, keyof RestEvents>, listener: (...args: any[]) => void) => this);
-
 	on: (<K extends keyof RestEvents>(event: K, listener: (...args: RestEvents[K]) => void) => this) &
 		(<S extends string | symbol>(event: Exclude<S, keyof RestEvents>, listener: (...args: any[]) => void) => this);
 
 	once: (<K extends keyof RestEvents>(event: K, listener: (...args: RestEvents[K]) => void) => this) &
+		(<S extends string | symbol>(event: Exclude<S, keyof RestEvents>, listener: (...args: any[]) => void) => this);
+
+	emit: (<K extends keyof RestEvents>(event: K, ...args: RestEvents[K]) => boolean) &
+		(<S extends string | symbol>(event: Exclude<S, keyof RestEvents>, ...args: any[]) => boolean);
+
+	off: (<K extends keyof RestEvents>(event: K, listener: (...args: RestEvents[K]) => void) => this) &
 		(<S extends string | symbol>(event: Exclude<S, keyof RestEvents>, listener: (...args: any[]) => void) => this);
 
 	removeAllListeners: (<K extends keyof RestEvents>(event?: K) => this) &
@@ -316,7 +317,7 @@ export class RequestManager extends EventEmitter {
 	 * @param request - All the information needed to make a request
 	 * @returns The response from the api request
 	 */
-	public async queueRequest(request: InternalRequest): Promise<Dispatcher.ResponseData> {
+	public async queueRequest(request: InternalRequest): Promise<Response> {
 		// Generalize the endpoint to its route data
 		const routeId = RequestManager.generateRouteData(request.fullRoute, request.method);
 		// Get the bucket hash for the generic route, or point to a global route otherwise
@@ -376,10 +377,10 @@ export class RequestManager extends EventEmitter {
 		}
 
 		// Create the required headers
-		const headers: RequestHeaders = {
+		const headers: Headers = new Headers({
 			...this.options.headers,
 			'User-Agent': `${DefaultUserAgent} ${options.userAgentAppendix}`.trim(),
-		};
+		});
 
 		// If this request requires authorization (allowing non-"authorized" requests for webhooks)
 		if (request.auth !== false) {
@@ -388,12 +389,12 @@ export class RequestManager extends EventEmitter {
 				throw new Error('Expected token to be set for this request, but none was present');
 			}
 
-			headers.Authorization = `${request.authPrefix ?? this.options.authPrefix} ${this.#token}`;
+			headers.set('Authorization', `${request.authPrefix ?? this.options.authPrefix} ${this.#token}`);
 		}
 
 		// If a reason was set, set it's appropriate header
 		if (request.reason?.length) {
-			headers['X-Audit-Log-Reason'] = encodeURIComponent(request.reason);
+			headers.set('X-Audit-Log-Reason', encodeURIComponent(request.reason));
 		}
 
 		// Format the full request URL (api base, optional version, endpoint, optional querystring)
@@ -453,14 +454,22 @@ export class RequestManager extends EventEmitter {
 		}
 
 		finalBody = await resolveBody(finalBody);
+		const finalHeaders = new Headers({
+			...(request.headers ?? {}),
+			...additionalHeaders,
+		});
+
+		for (const [k, v] of headers.entries()) {
+			finalHeaders.set(k, v);
+		}
 
 		const fetchOptions: RequestOptions = {
-			headers: { ...request.headers, ...additionalHeaders, ...headers } as Record<string, string>,
+			headers: finalHeaders,
 			method: request.method.toUpperCase() as Dispatcher.HttpMethod,
 		};
 
 		if (finalBody !== undefined) {
-			fetchOptions.body = finalBody as Exclude<RequestOptions['body'], undefined>;
+			fetchOptions.body = finalBody;
 		}
 
 		// Prioritize setting an agent per request, use the agent for this instance otherwise.

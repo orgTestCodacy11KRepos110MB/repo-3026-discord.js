@@ -1,14 +1,15 @@
 import { setTimeout, clearTimeout } from 'node:timers';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { AsyncQueue } from '@sapphire/async-queue';
-import { request, type Dispatcher } from 'undici';
+import type { IHandler } from './IHandler';
 import type { RateLimitData, RequestOptions } from '../REST';
 import type { HandlerRequestData, RequestManager, RouteData } from '../RequestManager';
 import { DiscordAPIError, type DiscordErrorData, type OAuthErrorData } from '../errors/DiscordAPIError.js';
 import { HTTPError } from '../errors/HTTPError.js';
 import { RateLimitError } from '../errors/RateLimitError.js';
+import { fetch, parseResponse, Response } from '../natives.js';
 import { RESTEvents } from '../utils/constants.js';
-import { hasSublimit, parseHeader, parseResponse } from '../utils/utils.js';
+import { hasSublimit, parseHeader } from '../utils/utils.js';
 import type { IHandler } from './IHandler.js';
 
 /**
@@ -165,7 +166,7 @@ export class SequentialHandler implements IHandler {
 		url: string,
 		options: RequestOptions,
 		requestData: HandlerRequestData,
-	): Promise<Dispatcher.ResponseData> {
+	): Promise<Response> {
 		let queue = this.#asyncQueue;
 		let queueType = QueueType.Standard;
 		// Separate sublimited requests when already sublimited
@@ -227,7 +228,7 @@ export class SequentialHandler implements IHandler {
 		options: RequestOptions,
 		requestData: HandlerRequestData,
 		retries = 0,
-	): Promise<Dispatcher.ResponseData> {
+	): Promise<Response> {
 		/*
 		 * After calculations have been done, pre-emptively stop further requests
 		 * Potentially loop until this task can run if e.g. the global rate limit is hit twice
@@ -293,10 +294,10 @@ export class SequentialHandler implements IHandler {
 
 		const controller = new AbortController();
 		const timeout = setTimeout(() => controller.abort(), this.manager.options.timeout).unref();
-		let res: Dispatcher.ResponseData;
+		let res: Response;
 
 		try {
-			res = await request(url, { ...options, signal: controller.signal });
+			res = await fetch(url, { ...options, signal: controller.signal });
 		} catch (error: unknown) {
 			// Retry the specified number of times for possible timed out requests
 			if (error instanceof Error && error.name === 'AbortError' && retries !== this.manager.options.retries) {
@@ -324,14 +325,14 @@ export class SequentialHandler implements IHandler {
 			);
 		}
 
-		const status = res.statusCode;
+		const status = res.status;
 		let retryAfter = 0;
 
-		const limit = parseHeader(res.headers['x-ratelimit-limit']);
-		const remaining = parseHeader(res.headers['x-ratelimit-remaining']);
-		const reset = parseHeader(res.headers['x-ratelimit-reset-after']);
-		const hash = parseHeader(res.headers['x-ratelimit-bucket']);
-		const retry = parseHeader(res.headers['retry-after']);
+		const limit = parseHeader(res.headers.get('x-ratelimit-limit'));
+		const remaining = parseHeader(res.headers.get('x-ratelimit-remaining'));
+		const reset = parseHeader(res.headers.get('x-ratelimit-reset-after'));
+		const hash = parseHeader(res.headers.get('x-ratelimit-bucket'));
+		const retry = parseHeader(res.headers.get('retry-after'));
 
 		// Update the total number of requests that can be made before the rate limit resets
 		this.limit = limit ? Number(limit) : Number.POSITIVE_INFINITY;
@@ -363,7 +364,7 @@ export class SequentialHandler implements IHandler {
 		// Handle retryAfter, which means we have actually hit a rate limit
 		let sublimitTimeout: number | null = null;
 		if (retryAfter > 0) {
-			if (res.headers['x-ratelimit-global'] !== undefined) {
+			if (parseHeader(res.headers.get('x-ratelimit-global')) !== undefined) {
 				this.manager.globalRemaining = 0;
 				this.manager.globalReset = Date.now() + retryAfter;
 			} else if (!this.localLimited) {
