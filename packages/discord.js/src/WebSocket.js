@@ -2,13 +2,17 @@
 
 let erlpack;
 const { Buffer } = require('node:buffer');
+const process = require('node:process');
 
 try {
   erlpack = require('erlpack');
   if (!erlpack.pack) erlpack = null;
 } catch {} // eslint-disable-line no-empty
 
-exports.WebSocket = require('ws');
+const hasNativeWebSocket =
+  typeof globalThis.WebSocket !== 'undefined' && (typeof process === 'undefined' || 'deno' in process.versions);
+
+exports.WebSocket = hasNativeWebSocket ? globalThis.WebSocket ?? require('ws') : require('ws');
 
 const ab = new TextDecoder();
 
@@ -32,7 +36,7 @@ exports.create = (gateway, query = {}, ...args) => {
   query.encoding = exports.encoding;
   query = new URLSearchParams(query);
   if (q) new URLSearchParams(q).forEach((v, k) => query.set(k, v));
-  const ws = new exports.WebSocket(`${g}?${query}`, ...args);
+  const ws = new exports.WebSocket(`${g}?${query}`, ...(hasNativeWebSocket ? [] : args));
   return ws;
 };
 
