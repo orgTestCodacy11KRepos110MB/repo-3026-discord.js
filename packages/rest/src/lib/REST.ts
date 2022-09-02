@@ -2,14 +2,11 @@ import { EventEmitter } from 'node:events';
 import type { Collection } from '@discordjs/collection';
 import type { Dispatcher } from 'undici';
 import { CDN } from './CDN.js';
-import {
-	RequestManager,
-	RequestMethod,
-	RouteLike,
-} from './RequestManager.js';
-import type { HashData } from './RequestManager.js';
-import type { IHandler } from './handlers/IHandler.js;
-import { fetch, parseResponse, Response } from './natives.js';
+import { RequestManager, RequestMethod } from './RequestManager.js';
+import type { HashData, RouteLike, HandlerRequestData, RequestData, InternalRequest } from './RequestManager.js';
+import type { IHandler } from './handlers/IHandler.js';
+import type { fetch, Response } from './natives.js';
+import { parseResponse } from './natives.js';
 import { DefaultRestOptions, RESTEvents } from './utils/constants.js';
 
 /**
@@ -209,7 +206,7 @@ export interface RestEvents {
 	newListener: [name: string, listener: (...args: any) => void];
 	rateLimited: [rateLimitInfo: RateLimitData];
 	removeListener: [name: string, listener: (...args: any) => void];
-	response: [request: APIRequest, response: Dispatcher.ResponseData];
+	response: [request: APIRequest, response: Response];
 	restDebug: [info: string];
 }
 

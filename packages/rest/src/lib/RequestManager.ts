@@ -158,16 +158,16 @@ export interface HashData {
 }
 
 export interface RequestManager {
-	on: (<K extends keyof RestEvents>(event: K, listener: (...args: RestEvents[K]) => void) => this) &
-		(<S extends string | symbol>(event: Exclude<S, keyof RestEvents>, listener: (...args: any[]) => void) => this);
-
-	once: (<K extends keyof RestEvents>(event: K, listener: (...args: RestEvents[K]) => void) => this) &
-		(<S extends string | symbol>(event: Exclude<S, keyof RestEvents>, listener: (...args: any[]) => void) => this);
-
 	emit: (<K extends keyof RestEvents>(event: K, ...args: RestEvents[K]) => boolean) &
 		(<S extends string | symbol>(event: Exclude<S, keyof RestEvents>, ...args: any[]) => boolean);
 
 	off: (<K extends keyof RestEvents>(event: K, listener: (...args: RestEvents[K]) => void) => this) &
+		(<S extends string | symbol>(event: Exclude<S, keyof RestEvents>, listener: (...args: any[]) => void) => this);
+
+	on: (<K extends keyof RestEvents>(event: K, listener: (...args: RestEvents[K]) => void) => this) &
+		(<S extends string | symbol>(event: Exclude<S, keyof RestEvents>, listener: (...args: any[]) => void) => this);
+
+	once: (<K extends keyof RestEvents>(event: K, listener: (...args: RestEvents[K]) => void) => this) &
 		(<S extends string | symbol>(event: Exclude<S, keyof RestEvents>, listener: (...args: any[]) => void) => this);
 
 	removeAllListeners: (<K extends keyof RestEvents>(event?: K) => this) &
@@ -455,12 +455,12 @@ export class RequestManager extends EventEmitter {
 
 		finalBody = await resolveBody(finalBody);
 		const finalHeaders = new Headers({
-			...(request.headers ?? {}),
+			...request.headers,
 			...additionalHeaders,
 		});
 
-		for (const [k, v] of headers.entries()) {
-			finalHeaders.set(k, v);
+		for (const [key, val] of headers.entries()) {
+			finalHeaders.set(key, val);
 		}
 
 		const fetchOptions: RequestOptions = {
@@ -500,10 +500,10 @@ export class RequestManager extends EventEmitter {
 	 * @internal
 	 */
 	private static generateRouteData(endpoint: RouteLike, method: RequestMethod): RouteData {
-		const majorIdMatch = /^\/(?:channels|guilds|webhooks)\/(\d{16,19})/.exec(endpoint);
+		const majorIdMatch = /^\/(?:channels|guilds|webhooks)\/(?<id>\d{16,19})/.exec(endpoint);
 
 		// Get the major id for this route - global otherwise
-		const majorId = majorIdMatch?.[1] ?? 'global';
+		const majorId = majorIdMatch?.groups?.id ?? 'global';
 
 		const baseRoute = endpoint
 			// Strip out all ids

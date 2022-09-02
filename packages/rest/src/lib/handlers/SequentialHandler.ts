@@ -1,13 +1,13 @@
 import { setTimeout, clearTimeout } from 'node:timers';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { AsyncQueue } from '@sapphire/async-queue';
-import type { IHandler } from './IHandler';
 import type { RateLimitData, RequestOptions } from '../REST';
 import type { HandlerRequestData, RequestManager, RouteData } from '../RequestManager';
 import { DiscordAPIError, type DiscordErrorData, type OAuthErrorData } from '../errors/DiscordAPIError.js';
 import { HTTPError } from '../errors/HTTPError.js';
 import { RateLimitError } from '../errors/RateLimitError.js';
-import { fetch, parseResponse, Response } from '../natives.js';
+import type { Response } from '../natives.js';
+import { fetch, parseResponse } from '../natives.js';
 import { RESTEvents } from '../utils/constants.js';
 import { hasSublimit, parseHeader } from '../utils/utils.js';
 import type { IHandler } from './IHandler.js';
@@ -321,7 +321,7 @@ export class SequentialHandler implements IHandler {
 					data: requestData,
 					retries,
 				},
-				{ ...res },
+				res.clone(),
 			);
 		}
 

@@ -1,5 +1,7 @@
-import { fetch as undiciFetch, Response as UndiciResponse } from 'undici';
-import { parseHeader } from './utils/utils';
+import process from 'node:process';
+import type { Response as UndiciResponse } from 'undici';
+import { fetch as undiciFetch } from 'undici';
+import { parseHeader } from './utils/utils.js';
 
 export const hasNativeFetch =
 	// @ts-expect-error Checking if we are in Deno and using global fetch instead of undici fetch
@@ -16,7 +18,7 @@ export type Response = UndiciResponse;
  *
  * @param res - The fetch response
  */
-export function parseResponse(res: Response): Promise<unknown> {
+export async function parseResponse(res: Response): Promise<unknown> {
 	const header = parseHeader(res.headers.get('content-type'));
 	if (header?.startsWith('application/json')) {
 		return res.json();

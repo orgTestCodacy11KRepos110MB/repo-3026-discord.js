@@ -157,8 +157,8 @@ test('getAuth', async () => {
 			path: genPath('/getAuth'),
 			method: 'GET',
 		})
-		.reply((t) => ({
-			data: { auth: (t.headers as unknown as Record<string, string | undefined>).authorization ?? null },
+		.reply((from) => ({
+			data: { auth: (from.headers as unknown as Record<string, string | undefined>).authorization ?? null },
 			statusCode: 200,
 			responseOptions,
 		}))
@@ -188,8 +188,8 @@ test('getReason', async () => {
 			path: genPath('/getReason'),
 			method: 'GET',
 		})
-		.reply((t) => ({
-			data: { reason: (t.headers as unknown as Record<string, string | undefined>)['x-audit-log-reason'] ?? null },
+		.reply((from) => ({
+			data: { reason: (from.headers as unknown as Record<string, string | undefined>)['x-audit-log-reason'] ?? null },
 			statusCode: 200,
 			responseOptions,
 		}))

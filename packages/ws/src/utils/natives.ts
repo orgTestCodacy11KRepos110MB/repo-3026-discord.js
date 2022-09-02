@@ -1,3 +1,4 @@
+import process from 'node:process';
 import { WebSocket as NPMWebSocket } from 'ws';
 
 export const hasNativeWebSocket =

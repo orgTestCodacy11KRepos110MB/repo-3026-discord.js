@@ -6,7 +6,7 @@ import { FormData, type RequestInit } from 'undici';
 import type { RequestOptions } from '../REST.js';
 import { RequestMethod } from '../RequestManager.js';
 
-export function parseHeader(header: string | string[] | null | undefined): string | undefined {
+export function parseHeader(header: string[] | string | null | undefined): string | undefined {
 	// eslint-disable-next-line eqeqeq
 	if (header == undefined) {
 		return undefined;

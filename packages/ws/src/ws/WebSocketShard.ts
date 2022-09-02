@@ -21,9 +21,11 @@ import {
 import type { CloseEvent, ErrorEvent, MessageEvent } from 'ws';
 import type { Inflate } from 'zlib-sync';
 import type { IContextFetchingStrategy } from '../strategies/context/IContextFetchingStrategy';
-import { ImportantGatewayOpcodes } from '../utils/constants';
-import { createWebSocket, WebSocket, WebSocketConnection } from '../utils/natives';
-import { lazy } from '../utils/utils';
+import { ImportantGatewayOpcodes } from '../utils/constants.js';
+import type { WebSocketConnection } from '../utils/natives';
+import { createWebSocket, WebSocket } from '../utils/natives.js';
+import { lazy } from '../utils/utils.js';
+import type { SessionInfo } from './WebSocketManager';
 
 // eslint-disable-next-line promise/prefer-await-to-then
 const getZlibSync = lazy(async () => import('zlib-sync').then((mod) => mod.default).catch(() => null));
@@ -31,11 +33,10 @@ const getZlibSync = lazy(async () => import('zlib-sync').then((mod) => mod.defau
 export enum WebSocketShardEvents {
 	Debug = 'debug',
 	Dispatch = 'dispatch',
+	Error = 'error',
 	Hello = 'hello',
 	Ready = 'ready',
 	Resumed = 'resumed',
-	Dispatch = 'dispatch',
-	Error = 'error',
 }
 
 export enum WebSocketShardStatus {
@@ -198,13 +199,14 @@ export class WebSocketShard extends AsyncEventEmitter<WebSocketShardEventsMap> {
 			this.connection.onmessage = null;
 
 			// Prevent a reconnection loop by unbinding the main close event and listening to when the connection closes
-			let resolve: () => void;
-			const promise = new Promise<void>((res) => {
-				resolve = res;
+			let resolvePromise: () => void;
+			const promise = new Promise<void>((resolve) => {
+				resolvePromise = resolve;
 			});
 			this.connection.onclose = () => {
-				resolve();
+				resolvePromise();
 			};
+
 			this.connection.close(options.code, options.reason);
 
 			// Actually wait for the connection to close
@@ -337,6 +339,7 @@ export class WebSocketShard extends AsyncEventEmitter<WebSocketShardEventsMap> {
 		// Deal with identify compress
 		if (this.useIdentifyCompress) {
 			return new Promise((resolve, reject) => {
+				// eslint-disable-next-line promise/prefer-await-to-callbacks
 				inflate(decompressable, { chunkSize: 65_535 }, (err, result) => {
 					if (err) {
 						reject(err);
