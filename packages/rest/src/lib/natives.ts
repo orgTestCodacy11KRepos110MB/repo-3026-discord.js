@@ -3,7 +3,7 @@ import { parseHeader } from './utils/utils';
 
 export const hasNativeFetch =
 	// @ts-expect-error Checking if we are in Deno and using global fetch instead of undici fetch
-	typeof globalThis.fetch !== 'undefined' && (typeof process === 'undefined' || 'deno' in process);
+	typeof globalThis.fetch !== 'undefined' && (typeof process === 'undefined' || 'deno' in process.versions);
 
 // @ts-expect-error Checking if we are in Deno
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, @typescript-eslint/no-unsafe-assignment -- Its necessary.
